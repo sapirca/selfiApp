@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2013 Sony Corporation -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.sefiremote"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+     <!-- TODO: min version was 9 but changed to 12 because of usbserial - necessary?  -->
+    <uses-sdk
+        android:minSdkVersion="12"
+        android:targetSdkVersion="17" />
+     
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    
+	<uses-feature android:name="android.hardware.usb.host" />
+        
+    <application
+        android:name="com.sefiremote.sony.cameraremote.SefiRemoteApplication"
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.Light">
+        
+		<activity
+		    android:name="com.sefiremote.arduino.usbserial.ConnectToArduinoActivity"
+		    android:label="@string/app_name"
+		    android:screenOrientation="landscape">
+		   
+		    <intent-filter>
+		        <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+		    </intent-filter>
+		
+		    <meta-data
+		        android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+		        android:resource="@xml/device_filter" />
+	
+   		
+		</activity>
+              
+        <activity
+            android:name="com.sefiremote.sony.cameraremote.ConnectToCameraActivity"
+            android:label="@string/activity_camera_title"
+            android:screenOrientation="landscape" >
+   	
+   		<intent-filter>
+			<action android:name="android.net.wifi.WIFI_STATE_CHANGED"/>
+			<action android:name="android.net.wifi.STATE_CHANGE"/>
+		</intent-filter>	       
+      
+   		         	   
+		          
+   		<intent-filter>
+	        <action android:name="android.intent.action.MAIN" />
+	        <category android:name="android.intent.category.DEFAULT" />
+	        <category android:name="android.intent.category.LAUNCHER" />
+	    </intent-filter>
+            
+        </activity>
+        
+        <activity
+            android:name="com.sefiremote.sony.cameraremote.WorkingModeActivity"
+            android:label="@string/activity_working_mode_title"
+            android:screenOrientation="landscape" >
+
+        </activity>
+                
+        <service
+		  android:name="com.sefiremote.arduino.usbserial.UsbSerialCommunication"
+		  android:label="@string/service_name">
+		</service> 
+        
+    </application>
+
+</manifest>
