@@ -130,53 +130,9 @@ public class ConnectToCameraActivity extends Activity {
         boolean b = wifi.enableNetwork(res, true);
         Log.d("WifiPreference", "enableNetwork returned " + b );        
         
-//        // Attempt to connect the camera 
-//        String networkSSID = "DIRECT-DZC2:DSC-RX100M3";
-//        String networkPass = "CM8owHL2";
-//
-//        WifiConfiguration conf = new WifiConfiguration();
-//        conf.SSID = "\"" + networkSSID + "\"";   // Please note the quotes. String should contain ssid in quotes
-//
-//        // WEP
-//        conf.wepKeys[0] = "\"" + networkPass + "\""; 
-//        conf.wepTxKeyIndex = 0;
-//        conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
-//        conf.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.); 
-//        
-//        // OR THIS: (WPA)
-//        // conf.preSharedKey = "\""+ networkPass +"\"";
-//        
-//        wifiManager.addNetwork(conf);
-//        
-//        List<WifiConfiguration> list = wifiManager.getConfiguredNetworks();
-//        for( WifiConfiguration i : list ) {
-//            if(i.SSID != null && i.SSID.equals("\"" + networkSSID + "\"")) {
-//                 wifiManager.disconnect();
-//                 wifiManager.enableNetwork(i.networkId, true);
-//                 wifiManager.reconnect();               
-//
-//                 break;
-//            }           
-//         }
-
-        
-        if (!mSwitchToWork) {
-        	wifi.disconnect();
-        	wifi.reconnect();  
-        }
-
-
-//        WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
-//        if (wifiManager.getWifiState() == WifiManager.WIFI_STATE_ENABLED) {
-//            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-//            String htmlLabel = String.format("SSID: <b>%s</b>",
-//                    wifiInfo.getSSID());
-//            textWifiSsid.setText(Html.fromHtml(htmlLabel));
-//        } else {
-//            textWifiSsid.setText(R.string.msg_wifi_disconnect);
-//        }
-        
-        
+    	wifi.disconnect();
+    	wifi.reconnect();  
+    	
         Log.d(TAG, "onResume() completed.");
     }
 

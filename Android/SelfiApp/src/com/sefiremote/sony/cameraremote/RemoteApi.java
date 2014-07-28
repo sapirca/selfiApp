@@ -639,4 +639,25 @@ public class RemoteApi {
     }
 
     
+    public JSONObject getSelfTimer() throws IOException {
+        String service = "camera";
+        try {
+            JSONObject requestJson = new JSONObject()
+                    .put("method", "setSelfTimer")
+                    .put("params", new JSONArray())
+                    .put("id", id())
+                    .put("version", "1.0");
+            String url = findActionListUrl(service) + "/" + service;
+
+            log("Request:  " + requestJson.toString());
+            String responseJson = SimpleHttpClient.httpPost(url,
+                    requestJson.toString());
+            log("Response: " + responseJson);
+            return new JSONObject(responseJson);
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
+    
 }

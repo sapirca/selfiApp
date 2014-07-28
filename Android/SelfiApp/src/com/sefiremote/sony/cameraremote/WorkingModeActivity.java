@@ -5,27 +5,26 @@
 package com.sefiremote.sony.cameraremote;
 
 import android.app.Activity;
-import android.app.PendingIntent.OnFinished;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.media.MediaScannerConnection;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Handler;
+import android.os.Environment;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.AdapterView.OnItemSelectedListener;
-import android.widget.ArrayAdapter;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,6 +37,8 @@ import com.sefiremote.R;
 import com.sefiremote.arduino.usbserial.UsbSerialCommunication;
 
 import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -72,9 +73,13 @@ public class WorkingModeActivity extends Activity {
     private ImageView 			mImagePictureWipe;
 //  private Spinner 			mSpinnerShootMode;
     private ImageButton 		mButtonTakePicture;
-    private TextView	 		mButtonTakePicture_Text;
+    private TextView	 		mTextTakePicture;
     private ImageButton 		mButtonRecStartStop;
-   
+    private TextView	 		mTextVideo;
+
+    private TextView	 		mTextCountdown;
+    private LinearLayout 		mLayoutAction;
+    
     private ImageButton 		mButtonPanUp;
     private ImageButton 		mButtonPanDown;
     private ImageButton 		mButtonPanRight;
@@ -148,8 +153,11 @@ public class WorkingModeActivity extends Activity {
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+      
+    	super.onCreate(savedInstanceState);
         
+    	getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    	
         mUsbSerialComm = new UsbSerialCommunication(this);
 
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
@@ -163,8 +171,11 @@ public class WorkingModeActivity extends Activity {
         mImagePictureWipe = (ImageView) findViewById(R.id.image_picture_wipe);
 //        mSpinnerShootMode = (Spinner) findViewById(R.id.spinner_shoot_mode);
         mButtonTakePicture = (ImageButton) findViewById(R.id.button_take_picture);
-        mButtonTakePicture_Text	= (TextView) findViewById(R.id.button_take_picture_text);
+        mTextTakePicture	= (TextView) findViewById(R.id.button_take_picture_text);
         mButtonRecStartStop = (ImageButton) findViewById(R.id.button_rec_start_stop);
+        mTextVideo 			= (TextView) findViewById(R.id.button_rec_start_stop_text);
+
+        mTextCountdown = (TextView) findViewById(R.id.text_countdown);
 
         mButtonPanUp = (ImageButton) findViewById(R.id.button_pan_up);
         mButtonPanDown = (ImageButton) findViewById(R.id.button_pan_down);
@@ -181,11 +192,15 @@ public class WorkingModeActivity extends Activity {
         mButtonRotateReset = (ImageButton) findViewById(R.id.button_rotate_reset);
         mButtonSetTimer = (ImageButton) findViewById(R.id.button_timer);
         
+        
+        mLayoutAction = (LinearLayout) findViewById(R.id.layout_actions);
+        
         mLiveviewSurface.bindRemoteApi(mRemoteApi);
 
         
          // TODO: Why did they put "False"?
 //        mSpinnerShootMode.setEnabled(false);
+        
         
         Log.d(TAG, "onCreate() completed.");
     }
@@ -238,19 +253,19 @@ public class WorkingModeActivity extends Activity {
 	           	 {
 	           	 case off:
 	           		 WorkingModeActivity.this.mButtonSetTimer.setImageResource(R.drawable.mcp_timer_off);
-	           		setSelfTimer(0);
+//	           		setSelfTimer(0, true);
 	           		 
 	           		 break;
 	           	 case sec5: 
 	           		 WorkingModeActivity.this.mButtonSetTimer.setImageResource(R.drawable.mcp_timer_5);
 	           		 // The program will suspend itself 3 seconds and then uses the 2 seconds (because of the sounds, it beeps)
-	           		 setSelfTimer(2);
+//	           		 setSelfTimer(2, true);
 	           		 break;
 
 	           	 case sec10: 
 	           		 // The program will suspend itself 8 seconds and then uses the 2 seconds (because of the sounds, it beeps)
 	           		 WorkingModeActivity.this.mButtonSetTimer.setImageResource(R.drawable.mcp_timer_10);
-	           		setSelfTimer(2);
+//	           		setSelfTimer(2, true);
 	           		 break;
 	           	 }
             	
@@ -264,111 +279,133 @@ public class WorkingModeActivity extends Activity {
         
         mButtonTakePicture.setOnClickListener(new View.OnClickListener() {
 
-            @Override
-            public void onClick(View v) {
+	        @Override
+	        public void onClick(View v) {
             	
-            	final Handler handler = new Handler();
-            	switch(mTimerMode) {
+	        	disableButtons_still();
+	        	
+            	// We were called from the takePicture method
+      			mTextTakePicture.setText("Switching");
+      			
+				new Thread() {
+					@Override
+					public void run() {
+	            	
+		      			// Force "still" shoot mode
+		            	setShootMode("still", false);
+		            	
+		            	runOnUiThread(new Runnable() { public void run() {
+		            			
+		            			mTextTakePicture.setText(""); // Done switching modes
+					    	}});
+		            	
+		            	switch(mTimerMode) {
+		
+		            	case off:
+		             		setSelfTimer(0, false);
+			           		takeAndFetchPicture();
+			           		 break;
+		           	
+		            	case sec5: 
+		            		setSelfTimer(2, false);
+		            		
+	            				
+	            				for (int i=5; i>3; i--){
+	            					final Integer val = i;
+	            					
+	            					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
+				            					    	mTextTakePicture.setText(val.toString());
+				            					    	mTextCountdown.setText(val.toString());
+				            					    	} });
+	            					try {
+										sleep(1000);
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+	            				}
+	            			
+	            				takeAndFetchPicture();
+	            				
+	
+	            				for (int i=3; i>0; i--){
+	
+	            					final Integer val = i;
+	            					
+	            					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
+				            					    	mTextTakePicture.setText(val.toString());
+				            					    	mTextCountdown.setText(val.toString());
+				            					    	} });
+	            					try {
+										sleep(1000);
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+	            				}
+	            			
+	            			
+	    					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
+		            					    	mTextTakePicture.setText(""); 
+		            					    	mTextCountdown.setText("");
+		            					    	} });
+	    					
+	    					
 
-            	case off:
-	           		takeAndFetchPicture();
-	           		 break;
-	           	
-            	case sec5: 
-            		setSelfTimer(2);
-            		
-            		new Thread(){
-            			public void run() {
-            				
-            				for (int i=5; i>3; i--){
-            					final Integer val = i;
-            					
-            					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
-			            					    	mButtonTakePicture_Text.setText(val.toString()); 
-			            					    	} });
-            					try {
-									sleep(1000);
-								} catch (InterruptedException e) {
-									e.printStackTrace();
-								}
-            				}
-            			
-            				takeAndFetchPicture();
-            				
+		                 break;
+		                 
+	            	case sec10: 
+	
+	            		setSelfTimer(2, false);
+	            		
+	            				
+	            				for (int i=10; i>3; i--){
+	            					final Integer val = i;
+	            					
+	            					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
+				            					    	mTextTakePicture.setText(val.toString());
+				            					    	mTextCountdown.setText(val.toString());
+				            					    	} });
+	            					try {
+										sleep(1000);
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+	            				}
+	            			
+	            				takeAndFetchPicture();
+	            				
+	
+	            				for (int i=3; i>0; i--){
+	
+	            					final Integer val = i;
+	            					
+	            					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
+				            					    	mTextTakePicture.setText(val.toString()); 
+				            					    	mTextCountdown.setText(val.toString());
+				            					    	} });
+	            					try {
+										sleep(1000);
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+	            				}
+	            			
+	            			
+	
+	    					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
+		            					    	mTextTakePicture.setText("");
+		            					    	mTextCountdown.setText("");
+		            					    	} });
+	    					
+	            		
+		                 break;
+		           	
+	            	default: break;
+		           	}
+	            	
+	              }
 
-            				for (int i=3; i>0; i--){
+              }.start();
 
-            					final Integer val = i;
-            					
-            					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
-			            					    	mButtonTakePicture_Text.setText(val.toString()); 
-			            					    	} });
-            					try {
-									sleep(1000);
-								} catch (InterruptedException e) {
-									e.printStackTrace();
-								}
-            				}
-            			
-            			
-
-    					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
-	            					    	mButtonTakePicture_Text.setText(""); } });
-    					
-            			};
-            		}.start();
-            		
-	                 break;
-	                 
-            	case sec10: 
-
-            		setSelfTimer(2);
-            		
-            		new Thread(){
-            			public void run() {
-            				
-            				for (int i=10; i>3; i--){
-            					final Integer val = i;
-            					
-            					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
-			            					    	mButtonTakePicture_Text.setText(val.toString()); 
-			            					    	} });
-            					try {
-									sleep(1000);
-								} catch (InterruptedException e) {
-									e.printStackTrace();
-								}
-            				}
-            			
-            				takeAndFetchPicture();
-            				
-
-            				for (int i=3; i>0; i--){
-
-            					final Integer val = i;
-            					
-            					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
-			            					    	mButtonTakePicture_Text.setText(val.toString()); 
-			            					    	} });
-            					try {
-									sleep(1000);
-								} catch (InterruptedException e) {
-									e.printStackTrace();
-								}
-            				}
-            			
-            			
-
-    					WorkingModeActivity.this.runOnUiThread(new Runnable() { public void run() {
-	            					    	mButtonTakePicture_Text.setText(""); } });
-    					
-            			};
-            		}.start();
-            		
-	                 break;
-	           	
-            	default: break;
-	           	}
             }
         });
         
@@ -382,8 +419,9 @@ public class WorkingModeActivity extends Activity {
             	switch(mVideoMode)
 	           	 {
 	           	 case off:
-	           		WorkingModeActivity.this.mButtonRecStartStop.setImageResource(R.drawable.mcp_video);
-	           		
+	           		 enableButtons_video();
+	           		 
+//	           		WorkingModeActivity.this.mButtonRecStartStop.setImageResource(R.drawable.mcp_video);
 	           		new Thread() {
 	           			
 		           		@Override
@@ -392,7 +430,7 @@ public class WorkingModeActivity extends Activity {
 				           		
 			           			stopMovieRec();
 //			           			sleep(5000);
-				            	setShootMode("still");
+				            	setShootMode("still", false);
 				            	
 //							} catch (InterruptedException e) {
 //								// TODO Auto-generated catch block
@@ -402,17 +440,22 @@ public class WorkingModeActivity extends Activity {
 	           		}.start();
 	           		
 	           		 break;
+	           		 
 	           	 case on: 
-	           		WorkingModeActivity.this.mButtonRecStartStop.setImageResource(R.drawable.mcp_stop);
-	           		
+ 	           		disableButtons_video();
+ 	           		
+ 	           		mTextVideo.setText("Switching..");
+ 	           		
+//	           		WorkingModeActivity.this.mButtonRecStartStop.setImageResource(R.drawable.mcp_stop);
 	           		new Thread() {
 	           		
 	           			@Override
 	           			public void run() {
 	           				
 //	    	           		try {
-		    	           		setShootMode("movie");
+		    	           		setShootMode("movie", false);
 //			           			sleep(5000);
+		    	           		
 		    	           		startMovieRec();
 //	    					} catch (InterruptedException e) {
 //	    						// TODO Auto-generated catch block
@@ -666,16 +709,8 @@ public class WorkingModeActivity extends Activity {
         });
 
         openConnection();
+              
         
-        
-//        UpdateTimerMode();
-        Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            public void run() {
-            	// If the camera was previously with timer - disable it
-            	setSelfTimer(0);
-            }
-          }, 10000);
 
         Log.d(TAG, "onResume() completed.");
     }
@@ -775,6 +810,9 @@ public class WorkingModeActivity extends Activity {
                         prepareActZoomButtons(false);
                     }
 
+                    // Disable the timer
+                    setSelfTimer(0, true);
+                    
                     Log.d(TAG, "openConnection(): completed.");
                 } catch (IOException e) {
                     Log.w(TAG, "openConnection: IOException: " + e.getMessage());
@@ -915,6 +953,9 @@ public class WorkingModeActivity extends Activity {
         return false;
     }
 
+    
+
+    
     // Prepare for Spinner to select "shootMode" by user.
     private void prepareShootModeSpinner() {
         new Thread() {
@@ -1055,28 +1096,43 @@ public class WorkingModeActivity extends Activity {
     }
     
     
-    private void setSelfTimer(final int TimeInSeconds) {
-        new Thread() {
+    private void setSelfTimer(final int TimeInSeconds, boolean inThreadContext) {
+    	
+    	if (inThreadContext)
+    	{
+    			new Thread() {
+				
+				@Override
+				public void run() {
+					sendSelfTimerRequest(TimeInSeconds);
+				
+				}}.start();
+    		
+    	}
+    	else
+    	{
+    		sendSelfTimerRequest(TimeInSeconds);
+    	}
+    	
+    }
+    
+    private void sendSelfTimerRequest(final int TimeInSeconds){
 
-            @Override
-            public void run() {
-                try {
-                    JSONObject replyJson = mRemoteApi.setSelfTimer(TimeInSeconds);
-                    JSONArray resultsObj = replyJson.getJSONArray("result");
-                    int resultCode = resultsObj.getInt(0);
-                    if (resultCode == 0) {
-                        // Success, but no refresh UI at the point.
-                    } else {
-                        Log.w(TAG, "setSelfTimer: error: " + resultCode);
-                        toast(R.string.msg_error_api_calling);
-                    }
-                } catch (IOException e) {
-                    Log.w(TAG, "setSelfTimer: IOException: " + e.getMessage());
-                } catch (JSONException e) {
-                    Log.w(TAG, "setSelfTimer: JSON format error.");
+	try {
+                JSONObject replyJson = mRemoteApi.setSelfTimer(TimeInSeconds);
+                JSONArray resultsObj = replyJson.getJSONArray("result");
+                int resultCode = resultsObj.getInt(0);
+                if (resultCode == 0) {
+                    // Success, but no refresh UI at the point.
+                } else {
+                    Log.w(TAG, "setSelfTimer: error: " + resultCode);
+                    toast(R.string.msg_error_api_calling);
                 }
+            } catch (IOException e) {
+                Log.w(TAG, "setSelfTimer: IOException: " + e.getMessage());
+            } catch (JSONException e) {
+                Log.w(TAG, "setSelfTimer: JSON format error.");
             }
-        }.start();
     }
     
     private void setFlashMode(final EFlashMode mode) {
@@ -1104,29 +1160,45 @@ public class WorkingModeActivity extends Activity {
     }
 
     // Call setShootMode
-    private void setShootMode(final String mode) {
-//        new Thread() {
-//
-//            @Override
-//            public void run() {
-                try {
-                    JSONObject replyJson = mRemoteApi.setShootMode(mode);
-                    JSONArray resultsObj = replyJson.getJSONArray("result");
-                    int resultCode = resultsObj.getInt(0);
-                    if (resultCode == 0) {
-                        // Success, but no refresh UI at the point.
-                    } else {
-                        Log.w(TAG, "setShootMode: error: " + resultCode);
-                        toast(R.string.msg_error_api_calling);
-                    }
-                } catch (IOException e) {
-                    Log.w(TAG, "setShootMode: IOException: " + e.getMessage());
-                } catch (JSONException e) {
-                    Log.w(TAG, "setShootMode: JSON format error.");
-                }
-//            }
-//        }.start();
+    private void setShootMode(final String mode, boolean inThreadContext) {
+
+    	if (inThreadContext)
+    	{
+    			new Thread() {
+				
+				@Override
+				public void run() {
+					sendShootModeRequest(mode);
+				
+				}}.start();
+    		
+    	}
+    	else
+    	{
+    		sendShootModeRequest(mode);
+    	}
     }
+
+    
+    void sendShootModeRequest(final String mode) {
+
+        try {
+            JSONObject replyJson = mRemoteApi.setShootMode(mode);
+            JSONArray resultsObj = replyJson.getJSONArray("result");
+            int resultCode = resultsObj.getInt(0);
+            if (resultCode == 0) {
+                // Success, but no refresh UI at the point.
+            } else {
+                Log.w(TAG, "setShootMode: error: " + resultCode);
+                toast(R.string.msg_error_api_calling);
+            }
+            } catch (IOException e) {
+                Log.w(TAG, "setShootMode: IOException: " + e.getMessage());
+            } catch (JSONException e) {
+                Log.w(TAG, "setShootMode: JSON format error.");
+            }
+ 	}
+    
 
     // Take a picture and retrieve the image data.
     private void takeAndFetchPicture() {
@@ -1141,12 +1213,21 @@ public class WorkingModeActivity extends Activity {
             public void run() {
                 try {
                 	
-                	// Force "still" shoot mode
-                	setShootMode("still");
                 	
                     JSONObject replyJson = mRemoteApi.actTakePicture();
                     JSONArray resultsObj = replyJson.getJSONArray("result");
                     JSONArray imageUrlsObj = resultsObj.getJSONArray(0);
+
+
+                    // Few buttons were disabled from the onClick() of the take picture button 
+                    // Enable them back
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            enableButtons_still();
+                        }
+                    });
+                    
                     String postImageUrl = null;
                     if (1 <= imageUrlsObj.length()) {
                         postImageUrl = imageUrlsObj.getString(0);
@@ -1161,20 +1242,36 @@ public class WorkingModeActivity extends Activity {
                     URL url = new URL(postImageUrl);
                     InputStream istream = new BufferedInputStream(
                             url.openStream());
+                    
+                    
+            
+                    
                     BitmapFactory.Options options = new BitmapFactory.Options();
                     options.inSampleSize = 4; // irresponsible value
+                    
+                    Bitmap bmp = BitmapFactory.decodeStream(istream, null, options);
+                    
                     final Drawable pictureDrawable = new BitmapDrawable(
-                            getResources(), BitmapFactory.decodeStream(istream,
-                                    null, options));
+                            getResources(), bmp);
+                    
+                    
                     istream.close();
+
+                    /**
+                     *  Save image to file
+                     */
+                    savePhoto(bmp);
+                    
                     runOnUiThread(new Runnable() {
 
                         @Override
                         public void run() {
                             mImagePictureWipe.setVisibility(View.VISIBLE);
                             mImagePictureWipe.setImageDrawable(pictureDrawable);
+                        
                         }
                     });
+                    
 
                 } catch (IOException e) {
                     Log.w(TAG, "IOException while closing slicer: " + e.getMessage());
@@ -1185,8 +1282,44 @@ public class WorkingModeActivity extends Activity {
                 } finally {
                     setProgressIndicator(false);
                 }
+                
+                
             }
         }.start();
+    }
+    
+
+    // Save bitmap to gallery
+    private void savePhoto(Bitmap bmp){
+    	
+     	String appDirectoryName  = getResources().getString(R.string.save_to_folder_name);
+
+		String file_path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)+ File.separator + appDirectoryName;
+		File dir = new File(file_path);
+		
+		if(!dir.exists())
+			dir.mkdirs();	
+
+		// Image file
+		File file = new File(dir, "IMG" + "_" +     System.currentTimeMillis() + ".jpg");
+		FileOutputStream out = null;
+		
+		try
+		{
+		 out = new FileOutputStream(file);
+		 bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
+		 out.flush();
+		 out.close();
+
+		 // ???
+		 MediaScannerConnection.scanFile(this, new String[] { file.getAbsolutePath() }, null, null);
+		 
+		 out = null;
+		} catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+		
     }
 
     // Call startMovieRec
@@ -1195,12 +1328,33 @@ public class WorkingModeActivity extends Activity {
 //
 //            @Override
 //            public void run() {
+    	
+
                 try {
                     Log.d(TAG, "startMovieRec: exec.");
                     JSONObject replyJson = mRemoteApi.startMovieRec();
                     JSONArray resultsObj = replyJson.getJSONArray("result");
                     int resultCode = resultsObj.getInt(0);
+                    
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                        	// In any case just erase the text
+                        	mTextVideo.setText(""); }});
+
+                    
+                    // If recording successfully started
                     if (resultCode == 0) {
+                    	runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                            	
+                            	mButtonRecStartStop.setEnabled(true);
+                            	// Change the button image to stop button
+                            	mButtonRecStartStop.setImageResource(R.drawable.mcp_stop);
+                            }
+                        });
+                    	
                         toast(R.string.msg_rec_start);
                     } else {
                         Log.w(TAG, "startMovieRec: error: " + resultCode);
@@ -1226,6 +1380,14 @@ public class WorkingModeActivity extends Activity {
                     JSONObject replyJson = mRemoteApi.stopMovieRec();
                     JSONArray resultsObj = replyJson.getJSONArray("result");
                     String thumbnailUrl = resultsObj.getString(0);
+                    
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                        	mButtonRecStartStop.setImageResource(R.drawable.mcp_video);
+                        }
+                    });
+                    
                     if (thumbnailUrl != null) {
                         toast(R.string.msg_rec_stop);
                     } else {
@@ -1265,6 +1427,39 @@ public class WorkingModeActivity extends Activity {
             }
         }.start();
     }
+    
+    private void disableButtons_still(){
+    	mButtonTakePicture.setEnabled(false);
+    	mButtonRecStartStop.setEnabled(false);
+    	mButtonSetTimer.setEnabled(false);
+    	mButtonFlashMode.setEnabled(false);
+    	
+    }
+    
+    private void enableButtons_still(){
+    	mButtonTakePicture.setEnabled(true);
+    	mButtonRecStartStop.setEnabled(true);
+    	mButtonSetTimer.setEnabled(true);
+    	mButtonFlashMode.setEnabled(true);
+    	
+    }
+    
+    
+    private void disableButtons_video(){
+    	mButtonTakePicture.setEnabled(false);
+    	mButtonSetTimer.setEnabled(false);
+    	mButtonFlashMode.setEnabled(false);
+    	mButtonRecStartStop.setEnabled(false);
+    	
+    }
+    
+    private void enableButtons_video(){
+    	mButtonTakePicture.setEnabled(true);
+    	mButtonSetTimer.setEnabled(true);
+    	mButtonFlashMode.setEnabled(true);
+    	mButtonRecStartStop.setEnabled(true);
+    }
+    
 
     // Show or hide progress indicator on title bar
     private void setProgressIndicator(final boolean visible) {

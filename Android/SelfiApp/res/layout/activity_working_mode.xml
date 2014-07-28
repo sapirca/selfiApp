@@ -5,6 +5,12 @@
     android:layout_height="match_parent"
     android:orientation="vertical" >
 
+    <!-- Maybe this layout is useless, but that's the only way I've found to center a textView over all other buttons -->
+    <RelativeLayout
+	android:id="@+id/relativelayout_wrapAll"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent" >
+  
     <com.sefiremote.sony.cameraremote.LiveviewSurfaceView
         android:id="@+id/surfaceview_liveview"
         android:layout_width="match_parent"
@@ -13,7 +19,8 @@
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom ="true"
         android:layout_weight="1"
         android:layout_marginBottom="10dp"
         android:orientation="horizontal" >
@@ -44,7 +51,8 @@
         android:id="@+id/text_camera_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|right"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom ="true"
         android:paddingLeft="8dp"
         android:paddingRight="8dp"
         android:text=""
@@ -54,7 +62,8 @@
         android:id="@+id/image_picture_wipe"
         android:layout_width="150dp"
         android:layout_height="100dp"
-        android:layout_gravity="bottom|left"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentBottom ="true"
         android:layout_marginBottom="10dp"
         android:layout_marginRight="10dp"
         android:background="@drawable/picture_wipe_boarder"
@@ -63,14 +72,15 @@
         android:visibility="invisible" />
 
     <LinearLayout
+        android:id="@+id/layout_actions"
         android:layout_width="125dp"
         android:layout_height="match_parent"
+        android:layout_alignParentRight="true"
         android:background="#66FFFFFF"
         android:orientation="vertical"
         android:layout_gravity="right"
         android:paddingRight="10dp" >
 
-        
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -197,6 +207,7 @@
 	        android:layout_margin="1dp"
 	        android:gravity="center"
 	        android:enabled="false"
+	        android:textSize="9sp"
 	        android:text=""
 	        android:textColor="#000000" />
 			</RelativeLayout>
@@ -253,4 +264,17 @@
             android:src="@drawable/mcp_arrow_down" />
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/text_countdown"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:text=""
+        android:textSize="80sp"
+        android:gravity="center"
+        android:textColor="#66FFFFFF"
+        android:visibility="visible" />
+
+    </RelativeLayout>
 </merge>

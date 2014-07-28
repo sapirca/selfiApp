@@ -4,6 +4,7 @@
 <resources>
 
     <string name="app_name">Se(l)fi app</string>
+    <string name="save_to_folder_name">Se(l)fi App</string>
     <string name="activity_ardunio_mode"> Arduino detector </string>
     
     <!-- TODO: How to use this labels without changing the app name on the device manager preview? -->
